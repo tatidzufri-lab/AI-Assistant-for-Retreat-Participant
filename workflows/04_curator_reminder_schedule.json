@@ -1,0 +1,711 @@
+{
+  "id": "e4DbbGZKjDqP4ih9",
+  "name": "Curator Reminder Schedule",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "6c7db25e-5bec-4b8e-a581-f46a75743b94",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Лист1"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Дата_ретрита",
+              "lookupValue": "={{ $today.plus({days: 3}).toFormat('dd.MM.yyyy') }}"
+            },
+            {
+              "lookupColumn": "Дата_ретрита",
+              "lookupValue": "={{ $today.toFormat('dd.MM.yyyy') }}"
+            },
+            {
+              "lookupColumn": "Дата_окончания",
+              "lookupValue": "={{ $today.minus({days: 2}).toFormat('dd.MM.yyyy') }}"
+            },
+            {
+              "lookupColumn": "Дата_окончания",
+              "lookupValue": "={{ $now.minus({days: 7}).toFormat('dd.MM.yyyy') }}"
+            },
+            {
+              "lookupColumn": "Дата_окончания",
+              "lookupValue": "={{ $now.minus({days: 30}).toFormat('dd.MM.yyyy') }}"
+            }
+          ]
+        },
+        "combineFilters": "OR",
+        "options": {
+          "returnFirstMatch": false
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        208,
+        0
+      ],
+      "id": "7c7bcaa9-73e4-4e12-87d3-973f953c2578",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nconst today = new Date();\ntoday.setHours(0, 0, 0, 0);\n\nconst result = [];\n\n// Все триггерные точки сценария\nconst triggerDays = [3, 0, -2, -7, -30];\n\nfor (const item of rows) {\n  const rawStart = item.json['Дата_ретрита'];\n  const rawEnd   = item.json['Дата_окончания'];\n  if (!rawStart) continue;\n\n  // Парсим Дата_ретрита (DD.MM.YYYY)\n  let retreatStart;\n  if (rawStart.includes('.')) {\n    const [d, m, y] = rawStart.split('.');\n    retreatStart = new Date(Number(y), Number(m) - 1, Number(d));\n  } else {\n    retreatStart = new Date(rawStart);\n  }\n  retreatStart.setHours(0, 0, 0, 0);\n  if (isNaN(retreatStart.getTime())) continue;\n\n  // Парсим Дата_окончания (DD.MM.YYYY)\n  let retreatEnd = null;\n  if (rawEnd && rawEnd.includes('.')) {\n    const [d, m, y] = rawEnd.split('.');\n    retreatEnd = new Date(Number(y), Number(m) - 1, Number(d));\n    retreatEnd.setHours(0, 0, 0, 0);\n    if (isNaN(retreatEnd.getTime())) retreatEnd = null;\n  }\n\n  // diffDays: до старта считаем от Дата_ретрита, после — от Дата_окончания\n  const diffFromStart = Math.round((retreatStart - today) / (1000 * 60 * 60 * 24));\n  const diffFromEnd   = retreatEnd\n    ? Math.round((today - retreatEnd) / (1000 * 60 * 60 * 24))\n    : null;\n\n  // Определяем активный diffDays для маршрутизации\n  let activeDiff = null;\n\n  if (diffFromStart === 3)  activeDiff = 3;   // за 3 дня\n  if (diffFromStart === 0)  activeDiff = 0;   // день старта\n  if (diffFromEnd   === 2)  activeDiff = -2;  // через 2 дня после\n  if (diffFromEnd   === 7)  activeDiff = -7;  // через 7 дней после\n  if (diffFromEnd   === 30) activeDiff = -30; // через 30 дней после\n\n  if (activeDiff === null) continue;\n\n  result.push({\n    json: {\n      ...item.json,\n      diffDays: String(activeDiff),\n      telegramId: String(item.json['Telegram_ID'])\n    }\n  });\n}\n\nreturn result;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "f97f105e-7c16-4886-8e59-693ce7d66e00",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.diffDays }}",
+                    "rightValue": "3",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "959e7e1c-03de-4833-97f3-97bec07a7cc0"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "За 3 дня"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "cd154af6-b72e-4a02-b5ac-3f1a04c6bea7",
+                    "leftValue": "={{ $json.diffDays }}",
+                    "rightValue": "0",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "День старта"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "db497f10-37ed-41ac-bab8-a445f1ec529d",
+                    "leftValue": "={{ $json.diffDays }}",
+                    "rightValue": "-2",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Через 2 дня"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "3a00126c-79a6-4d11-8c69-5ca78387710a",
+                    "leftValue": "={{ $json.diffDays }}",
+                    "rightValue": "-7",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Через 7 дней"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "4663f078-9145-4d53-99df-3096211e74f8",
+                    "leftValue": "={{ $json.diffDays }}",
+                    "rightValue": "-30",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Через 30 дней"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        576,
+        -48
+      ],
+      "id": "ad65b42f-77a5-43ea-8755-9f78eaee6387",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.telegramId }}",
+        "text": "=Доброе утро, {{ $json['Имя'] }} 🌿 До нашего погружения в горах осталось всего 3 дня.\n\nНайди сегодня 5 минут тишины и подумай: с каким запросом ты едешь? Что хочешь оставить здесь, а что забрать с собой? 🤍",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        816,
+        -192
+      ],
+      "id": "140c61f8-6953-4e45-9370-c9be2f7efdf1",
+      "name": "Send a text message",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Telegram bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.telegramId }}",
+        "text": "=Прошла неделя с нашего ретрита ✨ Как ты, {{ $json['Имя'] }}?\n\nЧто из пережитого осталось с тобой? Не нужно развёрнутого ответа — просто одно слово или образ, если хочется 🕊️",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        816,
+        240
+      ],
+      "id": "2fe661f7-e218-468f-81bb-9c468f971d5a",
+      "name": "Send a text message1",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Telegram bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Лист1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Telegram_ID": "={{ $json.Telegram_ID }}",
+            "Статус": "Едет на ретрит"
+          },
+          "matchingColumns": [
+            "Telegram_ID"
+          ],
+          "schema": [
+            {
+              "id": "Имя",
+              "displayName": "Имя",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Telegram_ID",
+              "displayName": "Telegram_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Дата_ретрита",
+              "displayName": "Дата_ретрита",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Статус",
+              "displayName": "Статус",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Ожидания",
+              "displayName": "Ожидания",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Диета",
+              "displayName": "Диета",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Дата_добавления",
+              "displayName": "Дата_добавления",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Дата_окончания",
+              "displayName": "Дата_окончания",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        816,
+        -48
+      ],
+      "id": "d880666c-fee7-4788-8afd-650c03b7c8b4",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Switch').item.json.Telegram_ID }}",
+        "text": "={{ $('Switch').item.json[\"Имя\"] }}, сегодня твой день 🏔️\n\nГоры уже ждут. Ты на пороге чего-то важного — и это твой выбор, твой шаг.\n\nЕсли что-то понадобится на месте — я здесь. Счастливого пути 🌿",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        992,
+        -48
+      ],
+      "id": "7c62dc2c-9283-45e3-a4c4-b561da8bd94e",
+      "name": "Send a text message2",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Telegram bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Лист1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Telegram_ID": "={{ $json.Telegram_ID }}",
+            "Статус": "Ретрит завершен"
+          },
+          "matchingColumns": [
+            "Telegram_ID"
+          ],
+          "schema": [
+            {
+              "id": "Имя",
+              "displayName": "Имя",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Telegram_ID",
+              "displayName": "Telegram_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Дата_ретрита",
+              "displayName": "Дата_ретрита",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Статус",
+              "displayName": "Статус",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Ожидания",
+              "displayName": "Ожидания",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Диета",
+              "displayName": "Диета",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Дата_добавления",
+              "displayName": "Дата_добавления",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Дата_окончания",
+              "displayName": "Дата_окончания",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        816,
+        96
+      ],
+      "id": "a76aa3aa-dcb9-4e75-a32e-c9f5de6c58e1",
+      "name": "Update row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Switch').item.json.Telegram_ID }}",
+        "text": "={{ $('Switch').item.json[\"Имя\"] }}, привет 🌿 Прошло два дня.\n\nГоры уже немного отдалились — что осталось внутри? Есть ли один инсайт или образ, который до сих пор с тобой?\n\nНе нужно развёрнутого ответа — просто то, что первым приходит 🤍",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        992,
+        96
+      ],
+      "id": "7e9d1c4c-1121-417d-af5d-4754bf247975",
+      "name": "Send a text message3",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Telegram bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.telegramId }}",
+        "text": "={{ $json['Имя'] }}, прошёл месяц 🌿\n\nЭто важная отметка — время, когда первые инсайты либо укореняются, либо растворяются в повседневности.\n\nКак ты сейчас с практиками из ретрита? Если захочешь поговорить или нужна поддержка — я здесь 🤍",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        816,
+        384
+      ],
+      "id": "521a028d-54ae-410a-a14c-050e3fa3eb4b",
+      "name": "Send a text message4",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Telegram bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send a text message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Send a text message3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "pinData": {},
+  "active": false
+}

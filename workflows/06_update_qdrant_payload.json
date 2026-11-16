@@ -1,0 +1,125 @@
+{
+  "id": "Ngxtjbuu0bP2UxJ8",
+  "name": "Update Qdrant Payload",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "f8a73ca4-ffa0-45e1-97be-2acd2b13705d",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://qdrant:6333/collections/retreat_kb/points/scroll",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "{   \"with_payload\": true,   \"limit\": 200 }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "70c1596f-4dc4-4d32-b846-154425042e86",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "QDRANT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const mapping = {\n  '22_current_schedule_filled.md': 'exact',\n  '05_pricing_tariffs.md': 'exact',\n  '06_booking_payment.md': 'exact',\n  '07_refund_policy.md': 'exact',\n  '08_location_logistics.md': 'exact',\n  '09_accommodation_food.md': 'exact',\n  '10_packing_list.md': 'exact',\n  '11_checkin_checkout.md': 'exact',\n  '15_participation_rules.md': 'exact',\n  '16_health_safety.md': 'exact',\n  '18_pre_retreat_preparation.md': 'exact',\n  '20_online_course.md': 'exact',\n  '23_postretrit_practices_checklist.md': 'exact',\n  '01_brand_overview.md': 'vector',\n  '04_retreat_concept.md': 'vector',\n  '12_program_overview.md': 'vector',\n  '13_daily_schedule.md': 'vector',\n  '14_practices_methods.md': 'vector',\n  '17_community.md': 'vector',\n  '19_post_retreat_integration.md': 'vector',\n  '21_guardrails.md': 'internal',\n  '02_tone_of_voice.md': 'internal',\n  '03_target_audience.md': 'internal',\n};\n\nconst points = $input.first().json?.result?.points ?? [];\n\n// Группируем IDs по search_type\nconst groups = {};\nfor (const point of points) {\n  const source = point.payload?.metadata?.source ?? '';\n  const type = mapping[source] ?? 'vector';\n  if (!groups[type]) groups[type] = [];\n  groups[type].push(point.id);\n}\n\n// Возвращаем один item на каждый тип\nreturn Object.entries(groups).map(([search_type, ids]) => ({\n  json: { search_type, ids }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "06366501-108b-4f7a-b405-623d0e2bc6a7",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://qdrant:6333/collections/retreat_kb/points/payload",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\n  \"payload\": {\n    \"search_type\": \"{{ $json.search_type }}\"\n  },\n  \"points\": {{ JSON.stringify($json.ids) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        624,
+        0
+      ],
+      "id": "c684ed97-5b39-4dbf-b808-c2d7a1628398",
+      "name": "HTTP Request1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "QDRANT"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "pinData": {},
+  "active": false
+}

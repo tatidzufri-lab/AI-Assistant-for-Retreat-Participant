@@ -1,0 +1,52 @@
+# n8n + Qdrant для ассистента участницы ретрита.
+# Тот же состав, что работает на сервере: n8n 2.x, база знаний в своем Qdrant.
+
+services:
+  n8n:
+    # Версия закреплена: сценарии собраны и проверены на ветви 2.x
+    image: n8nio/n8n:2.47.0
+    container_name: n8n
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - N8N_HOST=${N8N_DOMAIN:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      # В 2.x адрес вебхуков задается N8N_WEBHOOK_URL. Telegram Trigger без него не заработает
+      - N8N_WEBHOOK_URL=${N8N_PUBLIC_URL:-http://localhost:5678/}
+      - N8N_EDITOR_BASE_URL=${N8N_PUBLIC_URL:-http://localhost:5678/}
+      - GENERIC_TIMEZONE=Europe/Moscow
+      - TZ=Europe/Moscow
+      - DB_SQLITE_POOL_SIZE=5
+      - N8N_RUNNERS_ENABLED=true
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
+      # Узлы чтения файлов видят только каталог базы знаний
+      - N8N_RESTRICT_FILE_ACCESS_TO=/files/knowledge_base
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_VERSION_NOTIFICATIONS_ENABLED=false
+    ports:
+      # Только localhost: наружу панель отдает nginx
+      - "127.0.0.1:5678:5678"
+    volumes:
+      - ./data:/home/node/.n8n
+      # Сценарий загрузки читает отсюда .md файлы, запись не нужна
+      - ./knowledge_base:/files/knowledge_base:ro
+    depends_on:
+      qdrant:
+        condition: service_started
+    mem_limit: 1500m
+
+  qdrant:
+    image: qdrant/qdrant:v1.20.0
+    container_name: qdrant
+    restart: unless-stopped
+    environment:
+      - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY:?задайте QDRANT_API_KEY в .env}
+      - TZ=Europe/Moscow
+    volumes:
+      - ./qdrant_storage:/qdrant/storage
+    # Наружу порт не открыт: n8n ходит в Qdrant по адресу http://qdrant:6333
+    expose:
+      - "6333"
+    mem_limit: 1000m

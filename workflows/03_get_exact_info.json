@@ -1,0 +1,95 @@
+{
+  "id": "ldQJHCWww2xf7oze",
+  "name": "get_exact_info",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "source_file"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "1624a85e-6f3b-42b1-84cd-6bcbb5f2b901",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://qdrant:6333/collections/retreat_kb/points/scroll",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={   \"filter\": {     \"must\": [       {         \"key\": \"search_type\",         \"match\": { \"value\": \"exact\" }       },       {         \"key\": \"metadata.source\",         \"match\": { \"value\": \"{{ $json.source_file }}\" }       }     ]   },   \"with_payload\": true,   \"limit\": 100 }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "763acbb2-cc1d-4830-b2ec-2f421e491291",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "QDRANT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const points = $input.first().json?.result?.points ?? [];\n\nif (points.length === 0) {\n  return [{ json: { output: 'Информация по этой теме не найдена.', source: 'Неизвестно' } }];\n}\n\nconst sorted = points.sort((a, b) => {\n  const aFrom = a.payload?.metadata?.loc?.lines?.from ?? 0;\n  const bFrom = b.payload?.metadata?.loc?.lines?.from ?? 0;\n  return aFrom - bFrom;\n});\n\nconst text = sorted\n  .map(p => p.payload?.content ?? '')\n  .filter(t => t.length > 0)\n  .join('\\n\\n');\n\nconst humanNames = {\n  '22_current_schedule_filled.md': 'Расписание потоков',\n  '05_pricing_tariffs.md': 'Тарифы и цены',\n  '06_booking_payment.md': 'Бронирование и оплата',\n  '07_refund_policy.md': 'Политика возврата',\n  '08_location_logistics.md': 'Локация и логистика',\n  '09_accommodation_food.md': 'Проживание и питание',\n  '10_packing_list.md': 'Список вещей',\n  '11_checkin_checkout.md': 'Заезд и выезд',\n  '15_participation_rules.md': 'Правила участия',\n  '16_health_safety.md': 'Здоровье и безопасность',\n  '18_pre_retreat_preparation.md': 'Подготовка к ретриту',\n  '19_post_retreat_integration.md': 'Постретритная интеграция',\n  '20_online_course.md': 'Онлайн-курс «Познай себя»',\n  '23_postretrit_practices_checklist.md': 'Практики интеграции',\n};\n\nconst sourceFile = points[0]?.payload?.metadata?.source ?? '';\nconst humanName = humanNames[sourceFile] ?? sourceFile;\n\nreturn [{ json: { output: text, source: humanName } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "010e8d9c-5539-4f59-a6aa-ab8e75da07e2",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "pinData": {},
+  "active": false
+}

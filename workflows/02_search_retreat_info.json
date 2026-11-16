@@ -1,0 +1,157 @@
+{
+  "id": "9f3pxq4rsEqrwpEc",
+  "name": "search_retreat_info",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "query"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "12a9a2f5-b333-407c-af9f-f2874f1f2e40",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={   \"model\": \"text-embedding-3-small\",   \"input\": \"{{ $json.query }}\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "bc121b89-25d5-4f37-84ce-bd2cae9da204",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "OpenAI Embending"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const embedding = $input.first().json?.data?.[0]?.embedding ?? [];\nreturn [{ json: { embedding } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "9b725541-0d0e-43bd-95b0-526a94fc9f67",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://qdrant:6333/collections/retreat_kb/points/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={   \"vector\": {{ JSON.stringify($json.embedding) }},   \"filter\": {     \"must\": [       { \"key\": \"search_type\", \"match\": { \"value\": \"vector\" } }     ]   },   \"with_payload\": true,   \"limit\": 5 }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        624,
+        0
+      ],
+      "id": "ae07e393-9ba0-4f1b-9ca0-6a8d66957e97",
+      "name": "HTTP Request1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "QDRANT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const points = $input.first().json?.result ?? [];\n\nif (points.length === 0) {\n  return [{ json: { output: 'Информация не найдена.', source: 'Неизвестно' } }];\n}\n\nconst humanNames = {\n  '01_brand_overview.md': 'О ретрите',\n  '04_retreat_concept.md': 'Концепция ретрита',\n  '12_program_overview.md': 'Программа ретрита',\n  '13_daily_schedule.md': 'Расписание дня',\n  '14_practices_methods.md': 'Практики и методы',\n  '17_community.md': 'Сообщество',\n  '19_post_retreat_integration.md': 'Постретритная интеграция',\n  '23_postretrit_integraciya.md': 'Жизнь после ретрита',\n};\n\nconst text = points\n  .map(p => p.payload?.content ?? '')\n  .filter(t => t.length > 0)\n  .join('\\n\\n');\n\nconst sources = [...new Set(\n  points\n    .map(p => humanNames[p.payload?.metadata?.source] ?? p.payload?.metadata?.source ?? '')\n    .filter(s => s.length > 0)\n)];\n\nreturn [{ json: {\n  output: text,\n  source: sources.join(', ')\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        0
+      ],
+      "id": "3a0e4d2c-2b73-4b91-b7eb-8e00f33bcaf7",
+      "name": "Code in JavaScript1"
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "pinData": {},
+  "active": false
+}
