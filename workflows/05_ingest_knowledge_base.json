@@ -79,7 +79,7 @@
             "metadataValues": [
               {
                 "name": "doc_type",
-                "value": "=$binary.data.fileName.includes('22_') ? 'schedule' :\n$binary.data.fileName.includes('10_') ? 'packing' :\n$binary.data.fileName.includes('05_') ? 'pricing' :\n$binary.data.fileName.includes('08_') ? 'logistics' :\n$binary.data.fileName.includes('21_') ? 'internal' :\n$binary.data.fileName.includes('18_') ? 'preparation' :\n$binary.data.fileName.includes('19_') ? 'postretrit' :\n$binary.data.fileName.includes('23_') ? 'postretrit' :\n$binary.data.fileName.includes('20_') ? 'course' :\n'general'"
+                "value": "={{ $binary.data.fileName.includes('22_') ? 'schedule' :\n$binary.data.fileName.includes('10_') ? 'packing' :\n$binary.data.fileName.includes('05_') ? 'pricing' :\n$binary.data.fileName.includes('08_') ? 'logistics' :\n$binary.data.fileName.includes('21_') ? 'internal' :\n$binary.data.fileName.includes('18_') ? 'preparation' :\n$binary.data.fileName.includes('19_') ? 'postretrit' :\n$binary.data.fileName.includes('23_') ? 'postretrit' :\n$binary.data.fileName.includes('20_') ? 'course' :\n'general' }}"
               },
               {
                 "name": "source",
