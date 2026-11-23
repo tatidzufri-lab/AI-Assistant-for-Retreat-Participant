@@ -8,6 +8,9 @@
           "values": [
             {
               "name": "query"
+            },
+            {
+              "name": "lang"
             }
           ]
         }
@@ -70,7 +73,7 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "={   \"vector\": {{ JSON.stringify($json.embedding) }},   \"filter\": {     \"must\": [       { \"key\": \"search_type\", \"match\": { \"value\": \"vector\" } }     ]   },   \"with_payload\": true,   \"limit\": 5 }",
+        "body": "={   \"vector\": {{ JSON.stringify($json.embedding) }},   \"filter\": {     \"must\": [       { \"key\": \"search_type\", \"match\": { \"value\": \"vector\" } }{{ $('When Executed by Another Workflow').item.json.lang === 'en' ? ', { \"key\": \"metadata.lang\", \"match\": { \"value\": \"en\" } }' : '' }}     ]{{ $('When Executed by Another Workflow').item.json.lang === 'en' ? '' : ', \"must_not\": [ { \"key\": \"metadata.lang\", \"match\": { \"value\": \"en\" } } ]' }}   },   \"with_payload\": true,   \"limit\": 5 }",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -90,7 +93,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const points = $input.first().json?.result ?? [];\n\nif (points.length === 0) {\n  return [{ json: { output: 'Информация не найдена.', source: 'Неизвестно' } }];\n}\n\nconst humanNames = {\n  '01_brand_overview.md': 'О ретрите',\n  '04_retreat_concept.md': 'Концепция ретрита',\n  '12_program_overview.md': 'Программа ретрита',\n  '13_daily_schedule.md': 'Расписание дня',\n  '14_practices_methods.md': 'Практики и методы',\n  '17_community.md': 'Сообщество',\n  '19_post_retreat_integration.md': 'Постретритная интеграция',\n  '23_postretrit_integraciya.md': 'Жизнь после ретрита',\n};\n\nconst text = points\n  .map(p => p.payload?.content ?? '')\n  .filter(t => t.length > 0)\n  .join('\\n\\n');\n\nconst sources = [...new Set(\n  points\n    .map(p => humanNames[p.payload?.metadata?.source] ?? p.payload?.metadata?.source ?? '')\n    .filter(s => s.length > 0)\n)];\n\nreturn [{ json: {\n  output: text,\n  source: sources.join(', ')\n} }];"
+        "jsCode": "const points = $input.first().json?.result ?? [];\n\nif (points.length === 0) {\n  return [{ json: { output: 'Информация не найдена.', source: 'Неизвестно' } }];\n}\n\nconst humanNames = {\n  '01_brand_overview.md': 'О ретрите',\n  '04_retreat_concept.md': 'Концепция ретрита',\n  '12_program_overview.md': 'Программа ретрита',\n  '13_daily_schedule.md': 'Расписание дня',\n  '14_practices_methods.md': 'Практики и методы',\n  '17_community.md': 'Сообщество',\n  '19_post_retreat_integration.md': 'Постретритная интеграция',\n  '23_postretrit_integraciya.md': 'Жизнь после ретрита',\n  '01_brand_overview_en.md': 'About the retreat',\n  '04_retreat_concept_en.md': 'Retreat concept',\n  '12_program_overview_en.md': 'Retreat program',\n  '13_daily_schedule_en.md': 'Daily schedule',\n  '14_practices_methods_en.md': 'Practices and methods',\n  '17_community_en.md': 'Community',\n  '19_post_retreat_integration_en.md': 'Post-retreat integration',\n  '23_postretrit_integraciya_en.md': 'Life after the retreat',\n};\n\nconst text = points\n  .map(p => p.payload?.content ?? '')\n  .filter(t => t.length > 0)\n  .join('\\n\\n');\n\nconst sources = [...new Set(\n  points\n    .map(p => humanNames[p.payload?.metadata?.source] ?? p.payload?.metadata?.source ?? '')\n    .filter(s => s.length > 0)\n)];\n\nreturn [{ json: {\n  output: text,\n  source: sources.join(', ')\n} }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,

@@ -8,6 +8,9 @@
           "values": [
             {
               "name": "source_file"
+            },
+            {
+              "name": "lang"
             }
           ]
         }
@@ -30,7 +33,7 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "={   \"filter\": {     \"must\": [       {         \"key\": \"search_type\",         \"match\": { \"value\": \"exact\" }       },       {         \"key\": \"metadata.source\",         \"match\": { \"value\": \"{{ $json.source_file }}\" }       }     ]   },   \"with_payload\": true,   \"limit\": 100 }",
+        "body": "={   \"filter\": {     \"must\": [       {         \"key\": \"search_type\",         \"match\": { \"value\": \"exact\" }       },       {         \"key\": \"metadata.source\",         \"match\": { \"value\": \"{{ (() => { const f = String($json.source_file || '').trim().replace(/_en\\.md$/, '.md'); return $json.lang === 'en' ? f.replace(/\\.md$/, '_en.md') : f; })() }}\" }       }     ]   },   \"with_payload\": true,   \"limit\": 100 }",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -50,7 +53,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const points = $input.first().json?.result?.points ?? [];\n\nif (points.length === 0) {\n  return [{ json: { output: 'Информация по этой теме не найдена.', source: 'Неизвестно' } }];\n}\n\nconst sorted = points.sort((a, b) => {\n  const aFrom = a.payload?.metadata?.loc?.lines?.from ?? 0;\n  const bFrom = b.payload?.metadata?.loc?.lines?.from ?? 0;\n  return aFrom - bFrom;\n});\n\nconst text = sorted\n  .map(p => p.payload?.content ?? '')\n  .filter(t => t.length > 0)\n  .join('\\n\\n');\n\nconst humanNames = {\n  '22_current_schedule_filled.md': 'Расписание потоков',\n  '05_pricing_tariffs.md': 'Тарифы и цены',\n  '06_booking_payment.md': 'Бронирование и оплата',\n  '07_refund_policy.md': 'Политика возврата',\n  '08_location_logistics.md': 'Локация и логистика',\n  '09_accommodation_food.md': 'Проживание и питание',\n  '10_packing_list.md': 'Список вещей',\n  '11_checkin_checkout.md': 'Заезд и выезд',\n  '15_participation_rules.md': 'Правила участия',\n  '16_health_safety.md': 'Здоровье и безопасность',\n  '18_pre_retreat_preparation.md': 'Подготовка к ретриту',\n  '19_post_retreat_integration.md': 'Постретритная интеграция',\n  '20_online_course.md': 'Онлайн-курс «Познай себя»',\n  '23_postretrit_practices_checklist.md': 'Практики интеграции',\n};\n\nconst sourceFile = points[0]?.payload?.metadata?.source ?? '';\nconst humanName = humanNames[sourceFile] ?? sourceFile;\n\nreturn [{ json: { output: text, source: humanName } }];"
+        "jsCode": "const points = $input.first().json?.result?.points ?? [];\n\nif (points.length === 0) {\n  return [{ json: { output: 'Информация по этой теме не найдена.', source: 'Неизвестно' } }];\n}\n\nconst sorted = points.sort((a, b) => {\n  const aFrom = a.payload?.metadata?.loc?.lines?.from ?? 0;\n  const bFrom = b.payload?.metadata?.loc?.lines?.from ?? 0;\n  return aFrom - bFrom;\n});\n\nconst text = sorted\n  .map(p => p.payload?.content ?? '')\n  .filter(t => t.length > 0)\n  .join('\\n\\n');\n\nconst humanNames = {\n  '22_current_schedule_filled.md': 'Расписание потоков',\n  '05_pricing_tariffs.md': 'Тарифы и цены',\n  '06_booking_payment.md': 'Бронирование и оплата',\n  '07_refund_policy.md': 'Политика возврата',\n  '08_location_logistics.md': 'Локация и логистика',\n  '09_accommodation_food.md': 'Проживание и питание',\n  '10_packing_list.md': 'Список вещей',\n  '11_checkin_checkout.md': 'Заезд и выезд',\n  '15_participation_rules.md': 'Правила участия',\n  '16_health_safety.md': 'Здоровье и безопасность',\n  '18_pre_retreat_preparation.md': 'Подготовка к ретриту',\n  '19_post_retreat_integration.md': 'Постретритная интеграция',\n  '20_online_course.md': 'Онлайн-курс «Познай себя»',\n  '23_postretrit_practices_checklist.md': 'Практики интеграции',\n  '22_current_schedule_filled_en.md': 'Retreat schedule',\n  '05_pricing_tariffs_en.md': 'Packages and prices',\n  '06_booking_payment_en.md': 'Booking and payment',\n  '07_refund_policy_en.md': 'Refund policy',\n  '08_location_logistics_en.md': 'Location and travel',\n  '09_accommodation_food_en.md': 'Accommodation and meals',\n  '10_packing_list_en.md': 'Packing list',\n  '11_checkin_checkout_en.md': 'Check-in and check-out',\n  '15_participation_rules_en.md': 'Participation rules',\n  '16_health_safety_en.md': 'Health and safety',\n  '18_pre_retreat_preparation_en.md': 'Preparing for the retreat',\n  '19_post_retreat_integration_en.md': 'Post-retreat integration',\n  '20_online_course_en.md': 'Know Yourself online course',\n  '23_postretrit_practices_checklist_en.md': 'Integration practices',\n};\n\nconst sourceFile = points[0]?.payload?.metadata?.source ?? '';\nconst humanName = humanNames[sourceFile] ?? sourceFile;\n\nreturn [{ json: { output: text, source: humanName } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,

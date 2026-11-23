@@ -80,7 +80,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const rows = $input.all();\nconst today = new Date();\ntoday.setHours(0, 0, 0, 0);\n\nconst result = [];\n\n// Все триггерные точки сценария\nconst triggerDays = [3, 0, -2, -7, -30];\n\nfor (const item of rows) {\n  const rawStart = item.json['Дата_ретрита'];\n  const rawEnd   = item.json['Дата_окончания'];\n  if (!rawStart) continue;\n\n  // Парсим Дата_ретрита (DD.MM.YYYY)\n  let retreatStart;\n  if (rawStart.includes('.')) {\n    const [d, m, y] = rawStart.split('.');\n    retreatStart = new Date(Number(y), Number(m) - 1, Number(d));\n  } else {\n    retreatStart = new Date(rawStart);\n  }\n  retreatStart.setHours(0, 0, 0, 0);\n  if (isNaN(retreatStart.getTime())) continue;\n\n  // Парсим Дата_окончания (DD.MM.YYYY)\n  let retreatEnd = null;\n  if (rawEnd && rawEnd.includes('.')) {\n    const [d, m, y] = rawEnd.split('.');\n    retreatEnd = new Date(Number(y), Number(m) - 1, Number(d));\n    retreatEnd.setHours(0, 0, 0, 0);\n    if (isNaN(retreatEnd.getTime())) retreatEnd = null;\n  }\n\n  // diffDays: до старта считаем от Дата_ретрита, после — от Дата_окончания\n  const diffFromStart = Math.round((retreatStart - today) / (1000 * 60 * 60 * 24));\n  const diffFromEnd   = retreatEnd\n    ? Math.round((today - retreatEnd) / (1000 * 60 * 60 * 24))\n    : null;\n\n  // Определяем активный diffDays для маршрутизации\n  let activeDiff = null;\n\n  if (diffFromStart === 3)  activeDiff = 3;   // за 3 дня\n  if (diffFromStart === 0)  activeDiff = 0;   // день старта\n  if (diffFromEnd   === 2)  activeDiff = -2;  // через 2 дня после\n  if (diffFromEnd   === 7)  activeDiff = -7;  // через 7 дней после\n  if (diffFromEnd   === 30) activeDiff = -30; // через 30 дней после\n\n  if (activeDiff === null) continue;\n\n  result.push({\n    json: {\n      ...item.json,\n      diffDays: String(activeDiff),\n      telegramId: String(item.json['Telegram_ID'])\n    }\n  });\n}\n\nreturn result;\n"
+        "jsCode": "const rows = $input.all();\nconst today = new Date();\ntoday.setHours(0, 0, 0, 0);\n\nconst result = [];\n\n// Все триггерные точки сценария\nconst triggerDays = [3, 0, -2, -7, -30];\n\nfor (const item of rows) {\n  const rawStart = item.json['Дата_ретрита'];\n  const rawEnd   = item.json['Дата_окончания'];\n  if (!rawStart) continue;\n\n  // Парсим Дата_ретрита (DD.MM.YYYY)\n  let retreatStart;\n  if (rawStart.includes('.')) {\n    const [d, m, y] = rawStart.split('.');\n    retreatStart = new Date(Number(y), Number(m) - 1, Number(d));\n  } else {\n    retreatStart = new Date(rawStart);\n  }\n  retreatStart.setHours(0, 0, 0, 0);\n  if (isNaN(retreatStart.getTime())) continue;\n\n  // Парсим Дата_окончания (DD.MM.YYYY)\n  let retreatEnd = null;\n  if (rawEnd && rawEnd.includes('.')) {\n    const [d, m, y] = rawEnd.split('.');\n    retreatEnd = new Date(Number(y), Number(m) - 1, Number(d));\n    retreatEnd.setHours(0, 0, 0, 0);\n    if (isNaN(retreatEnd.getTime())) retreatEnd = null;\n  }\n\n  // diffDays: до старта считаем от Дата_ретрита, после — от Дата_окончания\n  const diffFromStart = Math.round((retreatStart - today) / (1000 * 60 * 60 * 24));\n  const diffFromEnd   = retreatEnd\n    ? Math.round((today - retreatEnd) / (1000 * 60 * 60 * 24))\n    : null;\n\n  // Определяем активный diffDays для маршрутизации\n  let activeDiff = null;\n\n  if (diffFromStart === 3)  activeDiff = 3;   // за 3 дня\n  if (diffFromStart === 0)  activeDiff = 0;   // день старта\n  if (diffFromEnd   === 2)  activeDiff = -2;  // через 2 дня после\n  if (diffFromEnd   === 7)  activeDiff = -7;  // через 7 дней после\n  if (diffFromEnd   === 30) activeDiff = -30; // через 30 дней после\n\n  if (activeDiff === null) continue;\n\n  result.push({\n    json: {\n      ...item.json,\n      diffDays: String(activeDiff),\n      // Язык участницы: имя и ожидания она пишет сама; без кириллицы — английский\n      lang: /[А-Яа-яЁё]/.test(String(item.json['Имя'] || '') + String(item.json['Ожидания'] || '')) ? 'ru' : 'en',\n      telegramId: String(item.json['Telegram_ID'])\n    }\n  });\n}\n\nreturn result;\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -235,7 +235,7 @@
     {
       "parameters": {
         "chatId": "={{ $json.telegramId }}",
-        "text": "=Доброе утро, {{ $json['Имя'] }} 🌿 До нашего погружения в горах осталось всего 3 дня.\n\nНайди сегодня 5 минут тишины и подумай: с каким запросом ты едешь? Что хочешь оставить здесь, а что забрать с собой? 🤍",
+        "text": "={{ $('Code in JavaScript').item.json.lang === 'en' ? \"Good morning, \" + $json['Имя'] + \" 🌿 Only 3 days left until our time in the mountains.\\n\\nFind 5 quiet minutes today and think: what are you bringing with you? What do you want to leave here, and what do you want to take home? 🤍\" : `Доброе утро, ${$json['Имя']} 🌿 До нашего погружения в горах осталось всего 3 дня.\n\nНайди сегодня 5 минут тишины и подумай: с каким запросом ты едешь? Что хочешь оставить здесь, а что забрать с собой? 🤍` }}",
         "additionalFields": {
           "appendAttribution": false
         }
@@ -258,7 +258,7 @@
     {
       "parameters": {
         "chatId": "={{ $json.telegramId }}",
-        "text": "=Прошла неделя с нашего ретрита ✨ Как ты, {{ $json['Имя'] }}?\n\nЧто из пережитого осталось с тобой? Не нужно развёрнутого ответа — просто одно слово или образ, если хочется 🕊️",
+        "text": "={{ $('Code in JavaScript').item.json.lang === 'en' ? \"It's been a week since our retreat ✨ How are you, \" + $json['Имя'] + \"?\\n\\nWhat from the experience has stayed with you? No need for a long answer, just one word or image if you like 🕊️\" : `Прошла неделя с нашего ретрита ✨ Как ты, ${$json['Имя']}?\n\nЧто из пережитого осталось с тобой? Не нужно развёрнутого ответа — просто одно слово или образ, если хочется 🕊️` }}",
         "additionalFields": {
           "appendAttribution": false
         }
@@ -410,7 +410,7 @@
     {
       "parameters": {
         "chatId": "={{ $('Switch').item.json.Telegram_ID }}",
-        "text": "={{ $('Switch').item.json[\"Имя\"] }}, сегодня твой день 🏔️\n\nГоры уже ждут. Ты на пороге чего-то важного — и это твой выбор, твой шаг.\n\nЕсли что-то понадобится на месте — я здесь. Счастливого пути 🌿",
+        "text": "={{ $('Code in JavaScript').item.json.lang === 'en' ? \"\" + $('Switch').item.json['Имя'] + \", today is your day 🏔️\\n\\nThe mountains are waiting. You're on the edge of something important, and it's your choice, your step.\\n\\nIf you need anything on site, I'm here. Have a good journey 🌿\" : `${$('Switch').item.json[\"Имя\"]}, сегодня твой день 🏔️\n\nГоры уже ждут. Ты на пороге чего-то важного — и это твой выбор, твой шаг.\n\nЕсли что-то понадобится на месте — я здесь. Счастливого пути 🌿` }}",
         "additionalFields": {
           "appendAttribution": false
         }
@@ -562,7 +562,7 @@
     {
       "parameters": {
         "chatId": "={{ $('Switch').item.json.Telegram_ID }}",
-        "text": "={{ $('Switch').item.json[\"Имя\"] }}, привет 🌿 Прошло два дня.\n\nГоры уже немного отдалились — что осталось внутри? Есть ли один инсайт или образ, который до сих пор с тобой?\n\nНе нужно развёрнутого ответа — просто то, что первым приходит 🤍",
+        "text": "={{ $('Code in JavaScript').item.json.lang === 'en' ? \"\" + $('Switch').item.json['Имя'] + \", hi 🌿 It's been two days.\\n\\nThe mountains feel a little further away now. What has stayed inside? Is there one insight or image that is still with you?\\n\\nNo need for a long answer, just whatever comes first 🤍\" : `${$('Switch').item.json[\"Имя\"]}, привет 🌿 Прошло два дня.\n\nГоры уже немного отдалились — что осталось внутри? Есть ли один инсайт или образ, который до сих пор с тобой?\n\nНе нужно развёрнутого ответа — просто то, что первым приходит 🤍` }}",
         "additionalFields": {
           "appendAttribution": false
         }
@@ -585,7 +585,7 @@
     {
       "parameters": {
         "chatId": "={{ $json.telegramId }}",
-        "text": "={{ $json['Имя'] }}, прошёл месяц 🌿\n\nЭто важная отметка — время, когда первые инсайты либо укореняются, либо растворяются в повседневности.\n\nКак ты сейчас с практиками из ретрита? Если захочешь поговорить или нужна поддержка — я здесь 🤍",
+        "text": "={{ $('Code in JavaScript').item.json.lang === 'en' ? \"\" + $json['Имя'] + \", it's been a month 🌿\\n\\nThis is an important moment: the time when first insights either take root or fade into everyday life.\\n\\nHow are you doing with the practices from the retreat? If you'd like to talk or need support, I'm here 🤍\" : `${$json['Имя']}, прошёл месяц 🌿\n\nЭто важная отметка — время, когда первые инсайты либо укореняются, либо растворяются в повседневности.\n\nКак ты сейчас с практиками из ретрита? Если захочешь поговорить или нужна поддержка — я здесь 🤍` }}",
         "additionalFields": {
           "appendAttribution": false
         }
