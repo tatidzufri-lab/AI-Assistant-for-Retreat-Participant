@@ -33,7 +33,7 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "={   \"filter\": {     \"must\": [       {         \"key\": \"search_type\",         \"match\": { \"value\": \"exact\" }       },       {         \"key\": \"metadata.source\",         \"match\": { \"value\": \"{{ (() => { const f = String($json.source_file || '').trim().replace(/_en\\.md$/, '.md'); return $json.lang === 'en' ? f.replace(/\\.md$/, '_en.md') : f; })() }}\" }       }     ]   },   \"with_payload\": true,   \"limit\": 100 }",
+        "body": "={   \"filter\": {     \"must\": [       {         \"key\": \"search_type\",         \"match\": { \"value\": \"exact\" }       },       {         \"key\": \"metadata.source\",         \"match\": { \"value\": \"{{ (() => { const f = String($json.source_file || '').trim(); const base = f.replace(/_en\\.md$/, '.md'); if ($json.lang === 'en') return base.replace(/\\.md$/, '_en.md'); if ($json.lang === 'ru') return base; return f; })() }}\" }       }     ]   },   \"with_payload\": true,   \"limit\": 100 }",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",

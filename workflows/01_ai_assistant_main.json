@@ -359,7 +359,10 @@
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
-          "value": {},
+          "value": {
+            "lang": "={{ $('Edit Fields').item.json.lang }}",
+            "source_file": "={{ $fromAI('source_file', 'Имя файла базы знаний из списка в описании инструмента, например 05_pricing_tariffs.md', 'string') }}"
+          },
           "matchingColumns": [
             "source_file"
           ],
@@ -409,7 +412,10 @@
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
-          "value": {},
+          "value": {
+            "lang": "={{ $('Edit Fields').item.json.lang }}",
+            "query": "={{ $fromAI('query', 'Вопрос участницы дословно', 'string') }}"
+          },
           "matchingColumns": [
             "query",
             "lang"
