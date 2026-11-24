@@ -89,7 +89,7 @@
     {
       "parameters": {
         "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
-        "text": "={{ $json.output }}",
+        "text": "={{ $json.output }}{{ /^\\/start\\b/i.test($('Telegram Trigger').first().json.message.text || '') ? ($('Edit Fields').first().json.lang === 'en' ? '\\n\\n(Demo on a fictional retreat scenario.)' : '\\n\\n(Это демо на учебном сценарии — ретрит вымышленный.)') : '' }}",
         "additionalFields": {
           "appendAttribution": false,
           "parse_mode": "Markdown"
