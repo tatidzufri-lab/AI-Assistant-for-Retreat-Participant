@@ -1,108 +1,110 @@
-# «Куратор»: AI-ассистент участницы ретрита «Познай себя»
+# Curator: an n8n AI assistant for a retreat scenario, from payment to life after
 
-Telegram-бот сопровождает участницу женского ретрита от оплаты до жизни после него: отвечает на организационные вопросы по базе знаний, сам напоминает о себе в нужные дни и передает организатору тревожные сообщения. Собран на n8n и Qdrant. Демо: [@poznay_sebya_asist_bot](https://t.me/poznay_sebya_asist_bot).
+A Telegram bot that accompanies a guest of a women's retreat from payment to life after the retreat. It answers practical questions from a knowledge base, reaches out on the right days by itself and passes worrying messages to the organizer. Built on n8n and Qdrant. Demo: [@poznay_sebya_asist_bot](https://t.me/poznay_sebya_asist_bot).
 
-![Знакомство с участницей](demo/01-onboarding-znakomstvo.jpg)
+This is a practice project. The retreat, "Know Yourself" («Познай себя»), is a training scenario of a retreat center, not a real organization. The bot speaks Russian and English. Case study: [tatidzufri.com/en/case/retreat-curator](https://tatidzufri.com/en/case/retreat-curator).
 
-## О проекте
+![Getting to know the guest](demo/01-onboarding-znakomstvo.jpg)
 
-Участница пишет боту в Telegram. AI-агент в n8n узнает ее статус из Google-таблицы участниц и подстраивает режим: первый контакт, подготовка к ретриту или жизнь после него. На фактические вопросы он отвечает по документам ретрита и в конце пишет, из какого документа взят ответ.
+## About the project
 
-Кроме ответов, у бота есть собственное расписание. В важные для нее дни он сам пишет участнице: за три дня до заезда, в день начала, через два дня, через неделю и через месяц после ретрита.
+The guest writes to the bot in Telegram. An AI agent in n8n looks up her status in a Google Sheet of guests and adjusts its mode: first contact, preparing for the retreat, or life after it. Factual questions are answered from the retreat documents, and the answer ends with the document it came from.
 
-## Задача
+Besides answering, the bot has its own schedule. On the days that matter it writes first: three days before arrival, on the first day, two days later, a week after and a month after the retreat.
 
-После оплаты участницы оставались без системного сопровождения до самого заезда. Организатор и менеджер вручную отвечали на одни и те же вопросы (что взять, как добраться, какое расписание), рассылали памятки и собирали анкеты. На каждый заезд это занимало 5–8 часов. Работы после ретрита не было вовсе, хотя именно тогда решается, останутся ли инсайты с человеком и вернется ли он снова.
+## The task
 
-Отвечать нужно было тепло, на «ты», в тоне бренда, без медицинских советов и обещаний результата. Тревожные сообщения должны сразу попадать к живому человеку.
+In this scenario, after payment a guest is left without any structured support until arrival. The organizer and a manager answer the same questions by hand (what to pack, how to get there, what the schedule is), send out reminders and collect questionnaires. After the retreat there's no follow-up at all, though that's exactly when it's decided whether the insights stay with the person and whether she comes back.
 
-## Решение
+Answers had to be warm, informal and in the brand's tone, with no medical advice and no promised results. Worrying messages had to reach a real person right away.
 
-1. **AI-агент на n8n.** Модель `gpt-4o-mini` (температура 0,4) с памятью на последние 10 сообщений. Системный промпт задает роль «теплой старшей сестры», правила бренда и три режима по статусу участницы.
-2. **База знаний в Qdrant.** 24 документа ретрита: цены, оплата и возврат, логистика, проживание, список вещей, программа, практики, правила, здоровье, текущее расписание, материалы после ретрита. Документы разделены на три типа поиска.
-3. **Два инструмента поиска.** Для точных вопросов (даты, цены, логистика, правила) агент берет документ целиком по имени файла, чтобы не потерять цифры. Для вопросов о философии, программе и практиках он ищет по смыслу. Служебные документы (тон голоса, портрет аудитории, ограничения агента) участнице не выдаются.
-4. **Анкета в Google Таблице.** Как только участница назвала имя и свой запрос, агент сам записывает их в таблицу «Участницы». Там же хранится статус: онбординг, едет на ретрит, ретрит завершен.
-5. **Расписание касаний.** Каждый день в 10:00 по Москве отдельный сценарий проверяет даты заездов и шлет сообщения в нужные дни, а заодно обновляет статус участницы.
-6. **Тревожные слова.** Если в сообщении есть «паника», «болит», «врач», «отмена», «возврат» и другие слова из списка, агент не отвечает сам. Участница получает мягкое сообщение с контактом организатора, а организатор уведомление с текстом сообщения.
+## How it works
 
-## Как это выглядит
+1. **An AI agent in n8n.** `gpt-4o-mini` (temperature 0.4) with memory of the last 10 messages. The system prompt sets the role of a "warm older sister", the brand rules and three modes by the guest's status.
+2. **A knowledge base in Qdrant.** 24 retreat documents: prices, payment and refunds, logistics, accommodation, packing list, program, practices, rules, health, the current schedule, after-retreat materials. Documents are split into three search types.
+3. **Two search tools.** For exact questions (dates, prices, logistics, rules) the agent pulls the whole document by file name, so no figures get lost. For questions about the philosophy, program and practices it searches by meaning. Internal documents (tone of voice, audience portrait, the agent's limits) are never shown to the guest.
+4. **A questionnaire in Google Sheets.** As soon as the guest gives her name and what she's looking for, the agent writes them into the "Guests" sheet. Her status lives there too: onboarding, going to the retreat, retreat finished.
+5. **A schedule of touchpoints.** Every day at 10:00 Moscow time a separate workflow checks arrival dates, sends messages on the right days and updates the guest's status.
+6. **Warning words.** If a message contains words like "panic", "hurts", "doctor", "cancel" or "refund", the agent doesn't answer on its own. The guest gets a gentle message with the organizer's contact, and the organizer gets an alert with the message text.
 
-**Цены и запись.** Ответ по документу с тарифами, ссылка на источник и передача к организатору для записи.
+## What it looks like
 
-![Цены и запись](demo/02-tseny-i-zapis.jpg)
+**Prices and booking.** An answer from the pricing document, the source, and a handover to the organizer for booking.
 
-**Тревога.** Бот не пытается справиться сам и сразу дает контакт живого человека.
+![Prices and booking](demo/02-tseny-i-zapis.jpg)
 
-| Тревожное сообщение | Перед заездом |
+**A worrying message.** The bot doesn't try to handle it alone and gives a real person's contact right away.
+
+| Worrying message | Before arrival |
 |:-:|:-:|
 | ![](demo/03-trevoga-peredacha-kuratoru.jpg) | ![](demo/04-napominaniya-pered-retritom.jpg) |
-| **После ретрита** | **Через месяц** |
+| **After the retreat** | **A month later** |
 | ![](demo/05-praktiki-posle-retrita.jpg) | ![](demo/06-kontakt-cherez-mesyats.jpg) |
 
-## Результат
+## Results
 
-- Повторяющиеся организационные вопросы бот закрывает сам, по документам и со ссылкой на источник.
-- Сопровождение после ретрита появилось и идет без участия команды: пять касаний от подготовки до отметки «прошел месяц».
-- Тревожные сообщения и вопросы о возврате или отмене сразу уходят организатору.
-- API модели обходится примерно в $6 в месяц на поток из 12 участниц. Расчет сделан по фактическим токенам полного прогона одного ретрита.
+- The bot answers recurring practical questions itself, from the documents and with the source.
+- Five scheduled touchpoints, from preparation to "a month has passed", are sent automatically.
+- Worrying messages and questions about refunds or cancellation go straight to the organizer.
+- By my estimate, based on the actual tokens of a full run of one retreat, the model API costs about $6 a month for a group of 12 guests.
 
-Что пока не так. Тревожные слова ищутся по списку, поэтому завуалированную формулировку бот может пропустить. Ответ на сложный вопрос иногда идет дольше обычного: в запрос попадает длинный системный промпт и фрагменты базы знаний.
+What's not there yet. Warning words are matched from a list, so a veiled phrasing can slip through. An answer to a complex question sometimes takes longer than usual, because the request carries a long system prompt and knowledge base fragments.
 
-## Английская версия
+## English version
 
-Бот говорит и по-английски, для англоязычных участниц ретрит адаптирован: Know Yourself в Доломитах, аэропорт Инсбрук, цены в долларах.
+The bot also speaks English. For English-speaking guests the retreat is adapted: Know Yourself in the Dolomites, Innsbruck airport, prices in US dollars.
 
-- **Язык** определяется в узле Edit Fields: `/start en`, кириллица в сообщении, три и больше латинских слова, иначе язык Telegram. Агент получает строку «Язык ответа: en» и отдельный английский блок в системном промпте.
-- **База знаний.** 21 документ на английском лежит в `knowledge_base_en/` (служебные «тон голоса», «аудитория» и «ограничения» не переводились: участнице они не выдаются). Они загружены в ту же коллекцию `retreat_kb` с `metadata.lang = "en"` скриптом `tools/build_points_en.py` (разбиение как в n8n, эмбеддинги `text-embedding-3-small`) и запросом `PUT /collections/retreat_kb/points`.
-- **Поиск.** `search_retreat_info` принимает `lang` и не смешивает языки. `get_exact_info` тоже принимает `lang` и сам приводит имя файла к нужному (`05_pricing_tariffs.md` → `05_pricing_tariffs_en.md`), даже если модель забыла суффикс.
-- **Тревожные слова** на английском ищутся целыми словами, чтобы «painting» не сработал как «pain». Ответ участнице на ее языке, уведомление организатору прежнее.
-- **Касания по расписанию** уходят на языке участницы. Отдельной колонки в таблице нет: язык определяется по имени и ожиданиям, которые она написала сама.
+- **Language** is detected in the Edit Fields node: `/start en`, Cyrillic in the message, three or more Latin words, otherwise the Telegram language. The agent gets the line "Reply language: en" and a separate English block in the system prompt.
+- **Knowledge base.** 21 English documents are in `knowledge_base_en/` (the internal "tone of voice", "audience" and "limits" documents weren't translated, since they're never shown to the guest). They're loaded into the same `retreat_kb` collection with `metadata.lang = "en"` by `tools/build_points_en.py` (chunking as in n8n, `text-embedding-3-small` embeddings) and a `PUT /collections/retreat_kb/points` request.
+- **Search.** `search_retreat_info` takes `lang` and doesn't mix languages. `get_exact_info` also takes `lang` and maps the file name itself (`05_pricing_tariffs.md` → `05_pricing_tariffs_en.md`), even if the model forgot the suffix.
+- **English warning words** are matched as whole words, so "painting" doesn't fire as "pain". The guest gets a reply in her language; the organizer alert stays the same.
+- **Scheduled touchpoints** go out in the guest's language. There's no separate column for it: the language is inferred from the name and expectations she wrote herself.
 
-## Стек технологий
+## Tech stack
 
-| Технология | Зачем используется |
+| Technology | What it's for |
 |---|---|
-| **n8n 2.47** | Все сценарии: агент, поиск, расписание касаний, загрузка базы знаний |
-| **OpenAI API** | `gpt-4o-mini` для диалога и `text-embedding-3-small` для поиска по смыслу |
-| **Qdrant 1.20** | Векторная база с документами ретрита, коллекция `retreat_kb` |
-| **Telegram Bot API** | Диалог с участницей и уведомления организатору |
-| **Google Sheets** | Анкеты, статусы и даты заездов участниц |
-| **Docker Compose** | n8n и Qdrant поднимаются одной командой. Qdrant наружу не открыт |
+| **n8n 2.47** | All workflows: the agent, search, the touchpoint schedule, knowledge base ingestion |
+| **OpenAI API** | `gpt-4o-mini` for the conversation and `text-embedding-3-small` for semantic search |
+| **Qdrant 1.20** | Vector database with the retreat documents, collection `retreat_kb` |
+| **Telegram Bot API** | The conversation with the guest and alerts to the organizer |
+| **Google Sheets** | Guests' questionnaires, statuses and arrival dates |
+| **Docker Compose** | Starts n8n and Qdrant with one command. Qdrant isn't exposed |
 
-## Структура репозитория
+## Repository structure
 
-- `workflows/`: сценарии n8n.
-  - `01_ai_assistant_main.json`: главный сценарий, Telegram и AI-агент.
-  - `02_search_retreat_info.json`: поиск по смыслу.
-  - `03_get_exact_info.json`: документ целиком по имени файла.
-  - `04_curator_reminder_schedule.json`: ежедневные касания и статусы.
-  - `05_ingest_knowledge_base.json`: загрузка документов в Qdrant.
-  - `06_update_qdrant_payload.json`: разметка типов поиска после загрузки.
-- `knowledge_base/`: 24 документа ретрита в Markdown.
-- `docker-compose.yml`, `.env.example`: запуск n8n и Qdrant.
-- `demo/`: скриншоты диалогов.
+- `workflows/`: n8n workflows.
+  - `01_ai_assistant_main.json`: the main workflow, Telegram and the AI agent.
+  - `02_search_retreat_info.json`: semantic search.
+  - `03_get_exact_info.json`: a whole document by file name.
+  - `04_curator_reminder_schedule.json`: daily touchpoints and statuses.
+  - `05_ingest_knowledge_base.json`: loading documents into Qdrant.
+  - `06_update_qdrant_payload.json`: tagging search types after loading.
+- `knowledge_base/`: 24 retreat documents in Markdown (Russian); `knowledge_base_en/`: 21 in English.
+- `docker-compose.yml`, `.env.example`: running n8n and Qdrant.
+- `demo/`: conversation screenshots.
 
-## Запуск
+## Running it
 
-Нужны Docker Compose и для работы Telegram-триггера публичный https-адрес n8n.
+You need Docker Compose and, for the Telegram trigger to work, a public https address for n8n.
 
 ```bash
-cp .env.example .env      # домен n8n, ключ шифрования, ключ Qdrant
+cp .env.example .env      # n8n domain, encryption key, Qdrant key
 docker compose up -d
 ```
 
-Дальше в интерфейсе n8n:
+Then in the n8n interface:
 
-1. Импортируйте сценарии из `workflows/` (Workflows → Import from file).
-2. Создайте учетные данные: Telegram-бот, OpenAI, Google Sheets, Qdrant (адрес `http://qdrant:6333` и ключ из `.env`) и заголовок `api-key` для HTTP-запросов к Qdrant. Подключите их к узлам, где учетные данные пустые.
-3. Укажите ID своей Google-таблицы вместо `YOUR_GOOGLE_SHEET_ID`. Колонки: `Имя`, `Telegram_ID`, `Дата_ретрита`, `Ожидания`, `Статус`, `Диета`, `Дата_добавления`.
-4. Впишите в `.env` переменную `CURATOR_CHAT_ID`: Telegram ID организатора, на него придут уведомления о тревожных сообщениях. Затем перезапустите n8n командой `docker compose up -d`.
-5. Опубликуйте сценарии `02` и `03`: в n8n 2.x вызывать можно только опубликованный сценарий.
-6. Запустите `05`, затем `06`: документы загрузятся в Qdrant и получат типы поиска.
-7. Включите сценарии `01` и `04`.
+1. Import the workflows from `workflows/` (Workflows → Import from file).
+2. Create credentials: the Telegram bot, OpenAI, Google Sheets, Qdrant (address `http://qdrant:6333` and the key from `.env`) and an `api-key` header for HTTP requests to Qdrant. Attach them to the nodes with empty credentials.
+3. Put your Google Sheet ID in place of `YOUR_GOOGLE_SHEET_ID`. The columns keep their Russian names: `Имя` (name), `Telegram_ID`, `Дата_ретрита` (retreat date), `Ожидания` (expectations), `Статус` (status), `Диета` (diet), `Дата_добавления` (date added).
+4. Add `CURATOR_CHAT_ID` to `.env`: the organizer's Telegram ID that receives alerts about worrying messages. Then restart n8n with `docker compose up -d`.
+5. Publish workflows `02` and `03`: in n8n 2.x only a published workflow can be called.
+6. Run `05`, then `06`: the documents load into Qdrant and get their search types.
+7. Activate workflows `01` and `04`.
 
-Чтобы добавить документ, положите его в `knowledge_base/`, допишите файл в таблицу типов внутри `06` и снова запустите `05` и `06`.
+To add a document, put it in `knowledge_base/`, add the file to the types table inside `06`, and run `05` and `06` again.
 
-## Автор
+## Author
 
-Татьяна Дзюбас, AI-инженер по автоматизации. Делаю Telegram-ботов, RAG-ассистентов и LLM-агентов, которые снимают рутину с небольших команд. Кейсы и контакты на [tatidzufri.com](https://tatidzufri.com).
+Tetiana Dziubas, AI automation engineer. I build Telegram bots, RAG assistants and LLM agents that take routine work off small teams. Case studies and contact: [tatidzufri.com/en](https://tatidzufri.com/en/).
